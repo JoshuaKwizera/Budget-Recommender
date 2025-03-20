@@ -12,9 +12,21 @@ export type BottomTabsParamList = {
 // types.ts or somewhere appropriate
 export type RootStackParamList = {
     SplashScreen: undefined;
+    HomeScreen: undefined;
+    BankScreen: undefined;
     LoginScreen: undefined;
     SignUpScreen: undefined;
+    MobileMoneyScreen: undefined;
+    ManualSpendingScreen: undefined;
+    SelectMobileProviderScreen: undefined;
+    SelectBankProviderScreen: undefined;
     BottomTabsNavigator: NavigatorScreenParams<BottomTabsParamList>;
     // Add other screens as needed
+    BudgetScreen: undefined;
+    BudgetShow: undefined;
+    BudgetShows: undefined;
+    ExpenseScreen: undefined;
+    FinalSummary: undefined;
+    BudgetOverview:undefined;
   };
   

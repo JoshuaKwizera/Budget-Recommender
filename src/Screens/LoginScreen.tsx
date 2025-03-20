@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Animated, ImageBackground } from 'react-native';
-import { RootStackParamList } from '../Transitions/navigation/types';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Animated, ImageBackground, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../Transitions/navigation/types';
+import { useIncome } from "../Storage"; // Import context
 
-// Define the type for navigation prop specific to LoginScreen
+
+// Define navigation type
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LoginScreen'>;
 
-// Import static assets
 const logo = require('../assets/logo.png');
 const backgroundImages = [
   require('../assets/finance2.png'),
@@ -15,25 +16,16 @@ const backgroundImages = [
   require('../assets/finance4.png'),
 ];
 
-// LoginScreen component definition
 const LoginScreen = () => {
-  // State hooks for managing focus and input values
+  const [username, setUsername] = useState('');
+  const {uName, setUName, setHasBudget, setIncomeSources, setExpense, setTotalExpense, setTotalIncome, setAmountLeft} = useIncome();
+  const [password, setPassword] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [typedText, setTypedText] = useState('');
-  
-  // Refs for animations
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const typingAnim = useRef(new Animated.Value(0)).current; 
-
-  // Navigation hook
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
-  // Full text to display in the footer with typing effect
-  const fullText = "Fast, Reliable & Affordable?";
-
-  // Effect for cycling background images with fade animation
   useEffect(() => {
     const interval = setInterval(() => {
       Animated.timing(fadeAnim, {
@@ -42,7 +34,6 @@ const LoginScreen = () => {
         useNativeDriver: true,
       }).start(() => {
         setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length);
-
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 1000,
@@ -54,53 +45,94 @@ const LoginScreen = () => {
     return () => clearInterval(interval);
   }, [fadeAnim]);
 
-  // Effect for typing animation of the footer text
-  useEffect(() => {
-    const typingInterval = 100; 
-    let index = 0;
+  const handleTextChange = (text) => {
+    setUsername(text);
+    setUName(text);
+  };
 
-    const typingTimer = setInterval(() => {
-      setTypedText((prev) => fullText.slice(0, index + 1));
-      index += 1;
-      if (index >= fullText.length) {
-        clearInterval(typingTimer);
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert('Error', 'Please enter both username and password.');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://investorsol4.pythonanywhere.com/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        Alert.alert('Success', 'Login successful!');
+        setUName(username);
+        // Extract token and budget data from the response
+        const { token, income = [], expenses = [] } = data;
+            if (income.length > 0 && expenses.length > 0) {
+          // Ensure amounts are parsed as floats
+          const parsedIncome = income.map(item => ({
+            category: item.category,
+            amount: parseFloat(item.amount) || 0,
+          }));
+  
+          const parsedExpenses = expenses.map(item => ({
+            category: item.category,
+            amount: parseFloat(item.amount) || 0,
+          }));
+          console.log(income);
+          setIncomeSources(income);
+          setExpense(expenses);
+  
+          // Calculate totals
+          const totalIncome = parsedIncome.reduce((sum, item) => sum + item.amount, 0);
+          const totalExpense = parsedExpenses.reduce((sum, item) => sum + item.amount, 0);
+          const amountRemaining = totalIncome - totalExpense;
+          setAmountLeft(amountRemaining);
+  
+          setTotalIncome(totalIncome);
+          setTotalExpense(totalExpense);
+  
+          // Set hasBudget to true
+          setHasBudget(true);
+        }
+  
+        // Navigate to home screen
+        navigation.navigate('BottomTabsNavigator', { screen: 'Home' });
+      } else {
+        Alert.alert('Error', data.message || 'Login failed. Please try again.');
       }
-    }, typingInterval);
-
-    return () => clearInterval(typingTimer);
-  }, []);
-
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again later.');
+    }
+  };
+  
+  
   return (
     <View style={styles.container}>
-      {/* Animated background image with fading effect */}
       <Animated.View style={[styles.backgroundImage, { opacity: fadeAnim }]}>
         <ImageBackground source={backgroundImages[currentImageIndex]} style={styles.backgroundImage} />
       </Animated.View>
 
       <View style={styles.content}>
-        {/* Logo image */}
         <Image source={logo} style={styles.logo} />
-        
-        {/* Welcome text */}
         <Text style={styles.welcomeText}>Welcome!</Text>
-        <Text style={styles.subText}>to F.W.H</Text>
 
-        {/* Phone number input with focus styles */}
+        {/* Username Input */}
         <View style={[styles.inputContainer, phoneFocused && styles.inputContainerFocused]}>
           <TextInput
             style={styles.input}
-            placeholder="+256 775 582 325"
-            keyboardType="phone-pad"
+            placeholder="Username"
             placeholderTextColor="#888"
             onFocus={() => setPhoneFocused(true)}
             onBlur={() => setPhoneFocused(false)}
+            onChangeText={handleTextChange}
+            value={username}
           />
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={[styles.icon, styles.iconColored]}>📞</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Password input with focus styles */}
+        {/* Password Input */}
         <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
           <TextInput
             style={styles.input}
@@ -109,41 +141,31 @@ const LoginScreen = () => {
             placeholderTextColor="#888"
             onFocus={() => setPasswordFocused(true)}
             onBlur={() => setPasswordFocused(false)}
+            onChangeText={setPassword}
+            value={password}
           />
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={[styles.icon, styles.iconColored]}>👁️</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Login button with navigation */}
-        <TouchableOpacity 
-          style={styles.loginButton} 
-          onPress={() => navigation.navigate('BottomTabsNavigator', { screen: 'Home' })}
-        >
+        {/* Login Button */}
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
-
-        {/* Link to reset password */}
+        {/* Forgot Password */}
         <TouchableOpacity>
           <Text style={styles.forgotPasswordText}>I forgot my password</Text>
         </TouchableOpacity>
 
-        {/* Sign up button with navigation */}
-        <TouchableOpacity style={styles.signUpButton}>
-          <Text style={styles.signUpButtonText} onPress={() => navigation.navigate('SignUpScreen')}>Sign Up</Text>
+        {/* Sign Up */}
+        <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('SignUpScreen')}>
+          <Text style={styles.signUpButtonText}>Sign Up</Text>
         </TouchableOpacity>
-
-        {/* Footer text with typing effect */}
-        <Text style={styles.footerText}>
-          {typedText} <Text style={styles.linkText}>here you are</Text>
-        </Text>
       </View>
     </View>
   );
 };
 
-// Styles for the LoginScreen component
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -172,11 +194,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
   },
-  subText: {
-    fontSize: 20,
-    color: '#075E54',
-    marginBottom: 30,
-  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,15 +215,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 10,
     color: '#000',
-  },
-  iconButton: {
-    padding: 10,
-  },
-  icon: {
-    fontSize: 20,
-  },
-  iconColored: {
-    color: '#075E54',
   },
   loginButton: {
     backgroundColor: '#075E54',
@@ -235,16 +243,7 @@ const styles = StyleSheet.create({
   },
   signUpButtonText: {
     color: '#075E54',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#000',
-  },
-  linkText: {
-    color: '#075E54',
-    textDecorationLine: 'underline',
+    fontSize: 16,
   },
 });
 

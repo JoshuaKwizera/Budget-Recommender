@@ -2,10 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FlipCard from 'react-native-flip-card';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../Transitions/navigation/types';
+
+// Define the type for navigation prop specific to LoginScreen
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'HomeScreen'>;
 
 const promoImage = require('../assets/promo.jpeg');
 
 const HomeScreen = () => {
+// Navigation hook
+const navigation = useNavigation<LoginScreenNavigationProp>();
+
   const [flipState, setFlipState] = useState(false); 
   const [flipping, setFlipping] = useState(true);
   let flipInterval: NodeJS.Timeout;
@@ -95,17 +104,17 @@ const HomeScreen = () => {
         {/* Actions Section */}
         <View style={styles.actionsSectionContainer}>
           <View style={styles.actionsRowContainer}>
-            <TouchableOpacity style={styles.actionItemContainer}>
+            <TouchableOpacity style={styles.actionItemContainer} onPress={() => navigation.navigate('SelectBankProviderScreen')}>
               <Icon name="home-outline" size={28} color="#075E54" />
               <Text style={styles.actionText}>Bank Statement</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItemContainer}>
+            <TouchableOpacity style={styles.actionItemContainer} onPress={() => navigation.navigate('SelectMobileProviderScreen')}>
               <Icon name="wallet-outline" size={28} color="#075E54" />
               <Text style={styles.actionText}>Mobile Money Statement</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.actionsWrapper}>
-            <TouchableOpacity style={styles.actionItemContainer}>
+          <TouchableOpacity style={styles.actionItemContainer} onPress={() => navigation.navigate('ManualSpendingScreen')}>
               <Icon name="document-outline" size={28} color="#075E54" />
               <Text style={styles.actionText}>Manual Entries</Text>
             </TouchableOpacity>

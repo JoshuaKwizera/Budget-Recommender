@@ -5,11 +5,18 @@ import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import HomeScreen from '../../../Screens/HomeScreen';
 import SharesScreen from '../../../Screens/SharesScreen';
 import ProfileScreen from '../../../Screens/ProfileScreen';
+import BudgetOverview from '../../../Screens/BudgetOverview';
 import { RouteProp } from '@react-navigation/native';
+import { useIncome } from "../../../Storage";
+import ChatScreen from '../../../Screens/ChatScreen';
+
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabsNavigator = () => {
+
+  const { hasBudget } = useIncome(); // Get hasBudget from context
+
   return (
     <Tab.Navigator
       initialRouteName="Home"
@@ -63,9 +70,9 @@ const BottomTabsNavigator = () => {
       {/* Floating Chat Tab */}
       <Tab.Screen 
         name="Chat" 
-        component={SharesScreen} 
+        component={ChatScreen} 
         options={{ 
-          headerShown: true,
+          headerShown: false,
           title: 'Chat',
           tabBarButton: (props) => (
             <View style={styles.floatingButtonContainer}>
@@ -80,9 +87,9 @@ const BottomTabsNavigator = () => {
       {/* Budget Tab */}
       <Tab.Screen 
         name="Budget" 
-        component={ProfileScreen} 
+        component={hasBudget ? BudgetOverview : ProfileScreen} 
         options={{ 
-          headerShown: true,
+          headerShown: false,
           title: 'Budget',
         }} 
       />

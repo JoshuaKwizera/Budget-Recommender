@@ -1,0 +1,24 @@
+{
+  "model": "models/gemini-1.5-pro",
+  "contents": [
+    {
+      "parts": [
+        {
+          "inline_data": {
+            "mime_type": "text/plain",
+            "data": ""
+          }
+        }
+      ],
+      "role": "user"
+    }
+  ],
+  "systemInstruction": {
+    "parts": [
+      {
+        "text": "You are an expert at analyzing financial texts."
+      }
+    ]
+  },
+  "ttl": "300s"
+}
