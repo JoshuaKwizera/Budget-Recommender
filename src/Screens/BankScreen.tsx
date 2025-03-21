@@ -164,8 +164,10 @@ const BankScreen: React.FC = () => {
                               - A positive value in the Debit column means an outgoing transaction.
                               - The Balance column reflects the account's total after the transaction.
                               - The Description column provides additional details such as transfer types, fees, or reference numbers.
+                              - first transaction is at the exterme bottom and doesnt matter whether its this year or not 
 
                               Analyze this data to identify spending patterns, detect anomalies, and extract meaningful insights.`,
+
                   },
                 ],
               },

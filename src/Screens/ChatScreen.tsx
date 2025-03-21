@@ -59,7 +59,7 @@ const ChatScreen: React.FC = () => {
       4. **Debit (Column D)** – Money withdrawn from the account.
       5. **Description (Column E)** – A brief description of the transaction.
 
-      ### **Important Rules (Strictly Follow):**
+      ### **Important Rules (Strictly Follow):**  
 
       - Every row follows this structure without exception.
       - Transactions **after** the given date are debits (outgoing transactions).
@@ -68,7 +68,7 @@ const ChatScreen: React.FC = () => {
       - The Description column contains details such as transfer types, fees, or reference numbers.
       - **Your response must maintain this format while providing clear, structured explanations.**
       - **All amounts must be in UGX** (Ugandan Shillings). Ensure the currency is always stated.
-
+      - first transaction is at the exterme bottom and doesnt matter whether its this year or not 
       ### **How to Respond:**
 
       - **Do not simply extract content; explain it in real words.**
