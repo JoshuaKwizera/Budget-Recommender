@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, FlatList, TextInput, Modal, Alert, } from "react-native";
+import { View, Text, ScrollView, Button, TouchableOpacity, StatusBar, FlatList, TextInput, Modal, Alert, } from "react-native";
 import { ProgressChart } from "react-native-chart-kit";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../Transitions/navigation/types';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useIncome } from "../Storage";
+import { useIncome } from '../Storage';
+import axios from 'axios';
 
 // Define the type for navigation prop specific to LoginScreen
 type BudgetPreviewNavigationProp = StackNavigationProp<RootStackParamList, 'BudgetOverview'>;
@@ -14,21 +15,47 @@ type BudgetPreviewNavigationProp = StackNavigationProp<RootStackParamList, 'Budg
 export default function BudgetScreen() {
   const { incomeSources, setIncomeSources, expense, setExpense, totalExpense, setTotalExpense, uName, totalIncome, setTotalIncome, amountLeft, setAmountLeft } = useIncome(); 
   const navigation = useNavigation<BudgetPreviewNavigationProp>();
-  const [activeTab, setActiveTab] = useState("PLAN");
+  const [activeTab, setActiveTab] = useState('PLAN');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [expenseEditingIndex, setExpenseEditingIndex] = useState<number | null>(null);
-  const [editedAmount, setEditedAmount] = useState("");
-  const [editedExpense, setEditedExpense] = useState("");
+  const [editedAmount, setEditedAmount] = useState('');
+  const [editedExpense, setEditedExpense] = useState('');
+  const [income, setIncomes] = useState("");
+  const [expenses, setExpenses] = useState("");
+  const [recommendation, setRecommendation] = useState("");
+
+  const getRecommendations = async () => {
+    try {
+      setIncomes(incomeSources);
+      setExpenses(expense);
+      const response = await axios.post("http://10.0.2.2:5000/generate-recommendations", {
+        income,
+        expenses,// Convert input to array
+      });
+      setRecommendation(response.data.recommendation);
+    } catch (error) {
+      console.error("Error getting recommendations:", error);
+      setRecommendation("Failed to fetch recommendations.");
+    }
+  };
+
+  const formatRecommendation = (text) => {
+    return text
+      .replace(/##+/g, "")  // Remove hashes
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold (**text**) formatting
+      .replace(/\*/g, "•") // Replace bullet points (*) with •
+      .replace(/###/g, ""); // Remove triple hashes
+  };  
 
   // Modal States
   const [modalVisible, setModalVisible] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
-  const [newAmount, setNewAmount] = useState("");
+  const [newCategory, setNewCategory] = useState('');
+  const [newAmount, setNewAmount] = useState('');
 
   // Expense Modal
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
-  const [newExpense, setNewExpense] = useState("");
-  const [newExpenseAmount, setNewExpenseAmount] = useState("");
+  const [newExpense, setNewExpense] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
 
   const data = {
     data: [2], // 100% used (2 out of 2)
@@ -57,41 +84,39 @@ export default function BudgetScreen() {
   const handleAddIncomeCategory = async () => {
     if (newCategory.trim() !== "" && newAmount.trim() !== "") {
       const incomeAmount = parseFloat(newAmount); // Ensure it's a number
-  
       if (isNaN(incomeAmount)) {
         Alert.alert("Error", "Please enter a valid income amount.");
         return;
       }
-  
+
       const newIncome = { name: newCategory, amount: String(incomeAmount) };
-  
+
       // Update total income first
       const updatedTotalIncome = totalIncome + incomeAmount;
-  
+
       // Compute new amount left correctly
       const updatedAmountLeft = updatedTotalIncome - totalExpense;
-  
       setTotalIncome(updatedTotalIncome);
       setAmountLeft(updatedAmountLeft);
-  
+
       console.log("Updated Total Income:", updatedTotalIncome);
       console.log("New Amount Left:", updatedAmountLeft);
-  
+
       try {
         const requestData = { uName, newIncome: [newIncome] };
-  
+
         const response = await fetch("http://investorsol4.pythonanywhere.com/newincome", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestData),
         });
-  
+
         const responseData = await response.json();
-  
+
         if (response.ok) {
           setIncomeSources([...incomeSources, newIncome]);
           Alert.alert("Success", "Income source added successfully!");
-  
+
           setNewCategory("");
           setNewAmount("");
           setModalVisible(false);
@@ -106,46 +131,46 @@ export default function BudgetScreen() {
       Alert.alert("Warning", "Please fill in both fields before adding.");
     }
   };
-  
-  
+
+
   const handleAddExpenseCategory = async () => {
     if (newExpense.trim() !== "" && newExpenseAmount.trim() !== "") {
       const expenseAmount = parseFloat(newExpenseAmount);
-  
+
       if (isNaN(expenseAmount)) {
         Alert.alert("Error", "Please enter a valid expense amount.");
         return;
       }
-  
+
       const newExpenseCat = { name: newExpense, amount: String(expenseAmount) };
-  
+
       // Update total expense first
       const updatedTotalExpense = totalExpense + expenseAmount;
-  
+
       // Compute new amount left correctly
       const updatedAmountLeft = totalIncome - updatedTotalExpense;
-  
+
       setTotalExpense(updatedTotalExpense);
       setAmountLeft(updatedAmountLeft);
-  
+
       console.log("Updated Total Expense:", updatedTotalExpense);
       console.log("New Amount Left:", updatedAmountLeft);
-  
+
       try {
         const requestData = { uName, newExpenseCat: [newExpenseCat] };
-  
+
         const response = await fetch("http://investorsol4.pythonanywhere.com/newexpense", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestData),
         });
-  
+
         const responseData = await response.json();
-  
+
         if (response.ok) {
           setExpense([...expense, newExpenseCat]);
           Alert.alert("Success", "Expense added successfully!");
-  
+
           setNewExpense("");
           setNewExpenseAmount("");
           setExpenseModalVisible(false);
@@ -160,8 +185,6 @@ export default function BudgetScreen() {
       Alert.alert("Warning", "Please fill in both fields before adding.");
     }
   };
-  
-  
 
   return (
     <ScrollView style={{ flex: 1 }}>
@@ -194,90 +217,158 @@ export default function BudgetScreen() {
           ))}
         </View>
       </View>
-    
+
 
       {/* Main Content Section */}
       <View style={{ backgroundColor: "#F6F1E9", flex: 1, padding: 20, borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -20 }}>
-                {/* Date Selection */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, backgroundColor: "white", borderRadius: 40, height: 60, paddingHorizontal: 15 }}>
-          <TouchableOpacity>
-            <Ionicons name="chevron-back-outline" size={24} color="black" />
-          </TouchableOpacity>
-          <Text style={{ fontSize: 18, fontWeight: "bold" }}>{`${currentMonth} ${currentYear}`}</Text>
-          <TouchableOpacity>
-            <Ionicons name="chevron-forward-outline" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
+        {/* Render Content Based on Active Tab */}
+        {activeTab === "PLAN" && (
+          <View>
+            {/*Date selection*/}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, backgroundColor: "white", borderRadius: 40, height: 60, paddingHorizontal: 15 }}>
+              <TouchableOpacity>
+                <Ionicons name="chevron-back-outline" size={24} color="black" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 18, fontWeight: "bold" }}>{`${currentMonth} ${currentYear}`}</Text>
+              <TouchableOpacity>
+                <Ionicons name="chevron-forward-outline" size={24} color="black" />
+              </TouchableOpacity>
+            </View>
 
-        {/* Total Expenses Card */}
-        <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, marginBottom: 20 }}>
-          <ProgressChart
-            data={data}
-            width={100}
-            height={100}
-            strokeWidth={10}
-            radius={32}
-            chartConfig={{
-              backgroundGradientFrom: "white",
-              backgroundGradientTo: "white",
-              color: (opacity = 1) => `rgba(26, 255, 146, ${opacity})`,
-            }}
-            hideLegend={true}
-          />
-          <View style={{  marginTop: -68, marginLeft: 100 }}>
+            {/* Total Expenses Card */}
+            <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, marginBottom: 20 }}>
+              <ProgressChart
+                data={data}
+                width={100}
+                height={100}
+                strokeWidth={10}
+                radius={32}
+                chartConfig={{
+                  backgroundGradientFrom: "white",
+                  backgroundGradientTo: "white",
+                  color: (opacity = 1) => `rgba(26, 255, 146, ${opacity})`,
+                }}
+                hideLegend={true}
+              />
+              <View style={{  marginTop: -68, marginLeft: 100 }}>
                 <Text style={{ fontSize: 14, fontWeight: "600", color: "#000", marginBottom: -50 }}>Total Planned Expenses</Text>
-            
                 </View>
-          
+
                 <View style={{  marginTop: 20, marginLeft: 100 }}>
-          
                 <Text style={{ fontSize: 25, fontWeight: "bold", color: "#000"}}>USh {totalExpense}</Text>
                 </View>
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
-            <View style={{ width: 10, height: 10, backgroundColor: "#00C49F", borderRadius: 5, marginRight: 10 }} />
-            <Text>Amount Left {amountLeft} USh</Text>
-          </View>
-        </View>
-
-        {/* Income Section */}
-        <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, marginBottom: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: "bold" }}>Income</Text>
-          <FlatList
-            data={incomeSources}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item, index }) => (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Ionicons name="wallet-outline" size={24} color="green" style={{ marginRight: 10 }} />
-                  <Text>{item.name}</Text>
-                </View>
-                {editingIndex === index ? (
-                  <TextInput
-                    style={{ borderBottomWidth: 1, width: 80, textAlign: "right" }}
-                    value={editedAmount}
-                    onChangeText={setEditedAmount}
-                    keyboardType="numeric"
-                  />
-                ) : (
-                  <Text style={{ fontWeight: "bold" }}>USh {item.amount}</Text>
-                )}
-                {editingIndex === index ? (
-                  <TouchableOpacity onPress={() => handleConfirmEdit(index)}>
-                    <Ionicons name="checkmark-circle" size={24} color="green" />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity onPress={() => { setEditingIndex(index); setEditedAmount(item.amount.toString()); }}>
-                    <Ionicons name="create-outline" size={24} color="gray" />
-                  </TouchableOpacity>
-                )}
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
+                <View style={{ width: 10, height: 10, backgroundColor: "#00C49F", borderRadius: 5, marginRight: 10 }} />
+                <Text>Amount Left {amountLeft} USh</Text>
               </View>
-            )}
-          />
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
-            <Ionicons name="add-circle-outline" size={24} color="gray" style={{ marginRight: 10 }} />
-            <Text style={{ color: "gray" }}>Add category</Text>
-          </TouchableOpacity>
-        </View>
+            </View>
+
+            {/* Income Section */}
+            <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold" }}>Income</Text>
+              <FlatList
+                data={incomeSources}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item, index }) => (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 10 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="wallet-outline" size={24} color="green" style={{ marginRight: 10 }} />
+                      <Text>{item.name}</Text>
+                    </View>
+                    {editingIndex === index ? (
+                      <TextInput
+                        style={{ borderBottomWidth: 1, width: 80, textAlign: "right" }}
+                        value={editedAmount}
+                        onChangeText={setEditedAmount}
+                        keyboardType="numeric"
+                      />
+                    ) : (
+                      <Text style={{ fontWeight: "bold" }}>USh {item.amount}</Text>
+                    )}
+                    {editingIndex === index ? (
+                      <TouchableOpacity onPress={() => handleConfirmEdit(index)}>
+                        <Ionicons name="checkmark-circle" size={24} color="green" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity onPress={() => { setEditingIndex(index); setEditedAmount(item.amount.toString()); }}>
+                        <Ionicons name="create-outline" size={24} color="gray" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              />
+              <TouchableOpacity onPress={() => setModalVisible(true)} style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
+                <Ionicons name="add-circle-outline" size={24} color="gray" style={{ marginRight: 10 }} />
+                <Text style={{ color: "gray" }}>Add category</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Expense Section */}
+            <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold" }}>Expenses</Text>
+              <FlatList
+                data={expense}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item, index }) => (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 10 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="cart-outline" size={24} color="green" style={{ marginRight: 10 }} />
+                      <Text>{item.name}</Text>
+                    </View>
+                    {expenseEditingIndex === index ? (
+                      <TextInput
+                        style={{ borderBottomWidth: 1, width: 80, textAlign: "right" }}
+                        value={editedExpense}
+                        onChangeText={setEditedExpense}
+                        keyboardType="numeric"
+                      />
+                    ) : (
+                      <Text style={{ fontWeight: "bold" }}>USh {item.amount}</Text>
+                    )}
+                    {expenseEditingIndex === index ? (
+                      <TouchableOpacity onPress={() => handleConfirmEditExpense(index)}>
+                        <Ionicons name="checkmark-circle" size={24} color="green" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity onPress={() => { setExpenseEditingIndex(index); setEditedExpense(item.amount.toString()); }}>
+                        <Ionicons name="create-outline" size={24} color="gray" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              />
+              <TouchableOpacity onPress={() => setExpenseModalVisible(true)} style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
+                <Ionicons name="add-circle-outline" size={24} color="gray" style={{ marginRight: 10 }} />
+                <Text style={{ color: "gray" }}>Add Expense</Text>
+              </TouchableOpacity>
+            </View>
+
+          </View>
+        )}
+
+        {activeTab === "RECOMMENDED" && (
+            <View>
+              <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10 }}>Budget Recommendations</Text>
+              <Text>Here are your budget recommendations based on your income and expenses.</Text>
+              {/* Add recommendation content here */}
+              {recommendation ? (
+                <View style={{ marginTop: 20, padding: 15, backgroundColor: "#dff0d8", borderRadius: 5 }}>
+                  <Text>{formatRecommendation(recommendation)}</Text>
+                </View>
+              ) : null}
+              <TouchableOpacity onPress={getRecommendations} style={{backgroundColor: "#075E54", paddingVertical: 15, width: "100%", borderRadius: 7, alignItems: "center", marginTop: 20,}}>
+                <Text style={{color: "white", fontSize: 16, fontWeight: "bold",}}>Get Budget Recommendations</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {activeTab === "INSIGHTS" && (
+            <View>
+              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>Financial Insights</Text>
+              <Text>Detailed insights about your financial habits.</Text>
+              {/* Add insights content here */}
+            </View>
+          )}
 
          {/* Modal for Adding Income */}
         <Modal transparent={true} visible={modalVisible} animationType="slide">
@@ -361,46 +452,6 @@ export default function BudgetScreen() {
             </View>
           </View>
         </Modal>
-
-        {/* Expense Section */}
-        <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, marginBottom: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: "bold" }}>Expenses</Text>
-          <FlatList
-            data={expense}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item, index }) => (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Ionicons name="cart-outline" size={24} color="green" style={{ marginRight: 10 }} />
-                  <Text>{item.name}</Text>
-                </View>
-                {expenseEditingIndex === index ? (
-                  <TextInput
-                    style={{ borderBottomWidth: 1, width: 80, textAlign: "right" }}
-                    value={editedExpense}
-                    onChangeText={setEditedExpense}
-                    keyboardType="numeric"
-                  />
-                ) : (
-                  <Text style={{ fontWeight: "bold" }}>USh {item.amount}</Text>
-                )}
-                {expenseEditingIndex === index ? (
-                  <TouchableOpacity onPress={() => handleConfirmEditExpense(index)}>
-                    <Ionicons name="checkmark-circle" size={24} color="green" />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity onPress={() => { setExpenseEditingIndex(index); setEditedExpense(item.amount.toString()); }}>
-                    <Ionicons name="create-outline" size={24} color="gray" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          />
-          <TouchableOpacity onPress={() => setExpenseModalVisible(true)} style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
-            <Ionicons name="add-circle-outline" size={24} color="gray" style={{ marginRight: 10 }} />
-            <Text style={{ color: "gray" }}>Add Expense</Text>
-          </TouchableOpacity>
-        </View>
 
          {/* Modal for Adding Expense */}
         <Modal transparent={true} visible={expenseModalVisible} animationType="slide">
